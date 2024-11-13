@@ -49,7 +49,7 @@ public class ChatService {
                 .addHeader("Authorization", "Bearer " + apiKey)
                 .addHeader("Content-Type", "application/json")
                 .build();
-        
+
         try (Response response = client.newCall(request).execute()) {
             if (response.isSuccessful() && response.body() != null) {
                 JSONObject responseBody = new JSONObject(response.body().string());
