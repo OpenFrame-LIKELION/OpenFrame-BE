@@ -88,11 +88,10 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd /home/ec2-user
-            if [ "$(sudo docker ps -a -q)" ]; then
-              sudo docker stop $(sudo docker ps -a -q)
-              sudo docker rm -f $(sudo docker ps -a -q)
-            fi
+            touch ./docker-compose.yml
+            echo "${{ secrets.DOCKER_COMPOSE }}" > ./docker-compose.yml
+            sudo docker stop $(sudo docker ps -a -q) 
+            sudo docker rm -f $(sudo docker ps -qa)
             sudo docker pull ${{ secrets.DOCKER_FRONT_IMG }}
             sudo docker pull ${{ secrets.DOCKER_IMG }}
             sudo docker-compose -f docker-compose.yml up -d
