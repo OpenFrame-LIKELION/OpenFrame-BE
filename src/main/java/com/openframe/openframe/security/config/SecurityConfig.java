@@ -18,13 +18,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 
 import java.util.Arrays;
 
@@ -55,19 +55,11 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(authz -> {
                     // 접근 허용
-                    authz.requestMatchers("/swagger-ui/**",
+                    authz.requestMatchers(
+                            "/swagger-ui/**",
                             "/swagger-resources/**",
                             "/v3/api-docs/**",
-                            "/api/v1/photobooth/**",
-                            "/api/v1/review/**",
-                            "/v1/public/**",
-                            "/page").permitAll();
-
-                    // 로그인 필요
-                    authz.requestMatchers("/v1/user/**",
-                            "/api/v1/album/**",
-                            "/api/v1/review").authenticated();
-
+                            "/page/**").permitAll();
                     // 그 외의 모든 요청은 인증 필요
                     authz.anyRequest().authenticated();
                 })
