@@ -10,10 +10,10 @@ import com.openframe.openframe.domain.repository.ChatRepository;
 import com.openframe.openframe.domain.repository.IndexRepository;
 import com.openframe.openframe.domain.repository.MemoRepository;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import okhttp3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ChatService {
 
     @Value("${openai.model}")
@@ -29,6 +30,10 @@ public class ChatService {
     private String apiUrl;
     @Value("${openai.api.key}")
     private String apiKey;
+
+    private final ChatRepository chatRepository;
+    private final MemoRepository memoRepository;
+    private final IndexRepository indexRepository;
 
     public String getChatGPTResponse(String prompt, String type) throws IOException {
         OkHttpClient client = new OkHttpClient();
@@ -76,15 +81,6 @@ public class ChatService {
         }
     }
 
-    @Autowired
-    private ChatRepository chatRepository;
-
-    @Autowired
-    private MemoRepository memoRepository;
-
-    @Autowired
-    private IndexRepository indexRepository;
-
     public Long createChat(ChatRequest request) {
         Chat chat = new Chat();
         chat.setQuestion(request.getQuestion());
@@ -107,6 +103,7 @@ public class ChatService {
         index.setChat(chat);
         return indexRepository.save(index).getId();
     }
+
     public List<MemoRequest> getAllMemos(Long chatId) {
         Chat chat = chatRepository.findById(chatId).orElseThrow(() -> new EntityNotFoundException("Chat not found"));
         return chat.getMemos().stream().map(memo -> {
