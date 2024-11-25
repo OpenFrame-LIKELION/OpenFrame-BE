@@ -20,14 +20,13 @@ public class Chat {
     @Column(length = 1000)
     private String response;
 
+    @Column(nullable = false)
+    private String type;
+
     // 생성자를 통해 필드 초기화
-    public Chat(String keyword, String response) {
+    public Chat(String keyword, String response, String type) {
         this.keyword = keyword;
         this.response = response;
-    }
-
-    // setChatEntity 메서드 정의
-    public Chat setChatEntity(String keyword, String response) {
-        return new Chat(keyword, response);
+        this.type = type;
     }
 }

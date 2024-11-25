@@ -40,18 +40,21 @@ public class ChatService {
     public List<Map<String, Object>> getChatGPTResponsesAndSave(String prompt) throws IOException {
         OkHttpClient client = new OkHttpClient();
 
-        // Create different prompts for the responses
-        List<String> prompts = List.of(
-                "다음 주제에 대해 긍정적으로 한국어로 답변해 주세요: " + prompt,
-                "다음 주제에 대해 긍정적으로 한국어로 답변해 주세요: " + prompt,
-                "다음 주제에 대해 부정적으로 한국어로 답변해 주세요: " + prompt,
-                "다음 주제에 대해 부정적으로 한국어로 답변해 주세요: " + prompt,
-                "다음 주제에 대해 중립적으로 한국어로 답변해 주세요: " + prompt
+        // Create prompts with corresponding types
+        List<Map<String, String>> promptTypes = List.of(
+                Map.of("prompt", "다음 주제에 대해 긍정적으로 한국어로 답변해 주세요: " + prompt, "type", "긍정"),
+                Map.of("prompt", "다음 주제에 대해 긍정적으로 한국어로 답변해 주세요: " + prompt, "type", "긍정"),
+                Map.of("prompt", "다음 주제에 대해 중립적으로 한국어로 답변해 주세요: " + prompt, "type", "중립"),
+                Map.of("prompt", "다음 주제에 대해 부정적으로 한국어로 답변해 주세요: " + prompt, "type", "부정"),
+                Map.of("prompt", "다음 주제에 대해 부정적으로 한국어로 답변해 주세요: " + prompt, "type", "부정")
         );
 
         List<Map<String, Object>> responseList = new ArrayList<>();
 
-        for (String modifiedPrompt : prompts) {
+        for (Map<String, String> promptType : promptTypes) {
+            String modifiedPrompt = promptType.get("prompt");
+            String type = promptType.get("type");
+
             // Build the request payload
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("model", model);
@@ -83,15 +86,15 @@ public class ChatService {
                             .getJSONObject("message")
                             .getString("content");
 
-                    // Save the response to the database
-                    Chat chat = new Chat();
-                    chat.setChatEntity(prompt, content);
+                    // Save the response with type to the database
+                    Chat chat = new Chat(prompt, content, type);
                     Long id = chatRepository.save(chat).getId();
 
-                    // Add the saved response to the result list
+                    // Add the saved response and type to the result list
                     Map<String, Object> responseMap = new HashMap<>();
                     responseMap.put("id", id);
                     responseMap.put("response", content);
+                    responseMap.put("type", type);
 
                     responseList.add(responseMap);
                 } else {
