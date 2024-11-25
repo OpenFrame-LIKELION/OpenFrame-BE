@@ -4,7 +4,10 @@ import com.openframe.openframe.domain.entity.Index;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface IndexRepository extends JpaRepository<Index, Long> {
-    // 필요 시 커스텀 메서드 추가 가능
+
+    List<Index> findAllByChatId(Long chatId);
 }

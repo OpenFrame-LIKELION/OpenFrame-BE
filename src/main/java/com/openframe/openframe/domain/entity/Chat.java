@@ -1,9 +1,11 @@
 package com.openframe.openframe.domain.entity;
 
 import jakarta.persistence.*;
-import java.util.ArrayList;
-import java.util.List;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Getter
+@NoArgsConstructor
 @Entity
 @Table(name = "chat")
 public class Chat {
@@ -13,44 +15,19 @@ public class Chat {
     private Long id;
 
     @Column(nullable = false)
-    private String question;
+    private String keyword;
 
-    @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Memo> memos = new ArrayList<>();
+    @Column(length = 1000)
+    private String response;
 
-    @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Index> indices = new ArrayList<>();
-
-    // Getters and Setters
-    public Long getId() {
-        return id;
+    // 생성자를 통해 필드 초기화
+    public Chat(String keyword, String response) {
+        this.keyword = keyword;
+        this.response = response;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getQuestion() {
-        return question;
-    }
-
-    public void setQuestion(String question) {
-        this.question = question;
-    }
-
-    public List<Memo> getMemos() {
-        return memos;
-    }
-
-    public void setMemos(List<Memo> memos) {
-        this.memos = memos;
-    }
-
-    public List<Index> getIndices() {
-        return indices;
-    }
-
-    public void setIndices(List<Index> indices) {
-        this.indices = indices;
+    // setChatEntity 메서드 정의
+    public Chat setChatEntity(String keyword, String response) {
+        return new Chat(keyword, response);
     }
 }

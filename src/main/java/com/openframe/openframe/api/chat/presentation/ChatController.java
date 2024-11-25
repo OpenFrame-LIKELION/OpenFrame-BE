@@ -1,6 +1,5 @@
 package com.openframe.openframe.api.chat.presentation;
 
-import com.openframe.openframe.api.chat.dto.ChatRequest;
 import com.openframe.openframe.api.chat.dto.IndexRequest;
 import com.openframe.openframe.api.chat.dto.MemoRequest;
 import com.openframe.openframe.api.chat.service.ChatService;
@@ -10,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -19,19 +19,12 @@ public class ChatController {
     private final ChatService chatService;
 
     @GetMapping()
-    public ApplicationResponse<String> getChatGptOpenApi(
-            @RequestParam String keyword,
-            @RequestParam String type
+    public ApplicationResponse<List<Map<String, Object>>> getChatGptOpenApi(
+            @RequestParam String keyword
     ) throws IOException {
 
-        final String chatGPTResponse = chatService.getChatGPTResponse(keyword, type);
+        final List<Map<String, Object>> chatGPTResponse = chatService.getChatGPTResponsesAndSave(keyword);
         return ApplicationResponse.ok(chatGPTResponse);
-    }
-
-    @PostMapping
-    public ApplicationResponse<Long> createChat(@RequestBody ChatRequest request) {
-        Long chatId = chatService.createChat(request);
-        return ApplicationResponse.ok(chatId);
     }
 
     @PostMapping("/{chatId}/memo")
@@ -66,7 +59,7 @@ public class ChatController {
 
     @GetMapping("/{chatId}/index")
     public ApplicationResponse<List<IndexRequest>> getAllIndices(@PathVariable Long chatId) {
-        List<IndexRequest> indices = chatService.getAllIndices(chatId);
+        List<IndexRequest> indices = chatService.getAllIndexes(chatId);
         return ApplicationResponse.ok(indices);
     }
 

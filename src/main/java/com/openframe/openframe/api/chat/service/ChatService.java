@@ -1,6 +1,5 @@
 package com.openframe.openframe.api.chat.service;
 
-import com.openframe.openframe.api.chat.dto.ChatRequest;
 import com.openframe.openframe.api.chat.dto.IndexRequest;
 import com.openframe.openframe.api.chat.dto.MemoRequest;
 import com.openframe.openframe.domain.entity.Chat;
@@ -18,7 +17,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -35,56 +37,70 @@ public class ChatService {
     private final MemoRepository memoRepository;
     private final IndexRepository indexRepository;
 
-    public String getChatGPTResponse(String prompt, String type) throws IOException {
+    public List<Map<String, Object>> getChatGPTResponsesAndSave(String prompt) throws IOException {
         OkHttpClient client = new OkHttpClient();
 
-        String modifiedPrompt = switch (type.toLowerCase()) {
-            case "긍정" -> "다음 주제에 대해 긍정적으로 한국어로 답변해 주세요: " + prompt;
-            case "부정" -> "다음 주제에 대해 부정적으로 한국어로 답변해 주세요: " + prompt;
-            case "중립" -> "다음 주제에 대해 중립적으로 한국어로 답변해 주세요: " + prompt;
-            default ->
-                    throw new IllegalArgumentException("유효하지 않은 타입입니다. 'positive', 'negative', 'neutral' 중 하나여야 합니다.");
-        };
-
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("model", model);
-        jsonObject.put("messages", new JSONArray()
-                .put(new JSONObject()
-                        .put("role", "user")
-                        .put("content", modifiedPrompt)
-                )
+        // Create different prompts for the responses
+        List<String> prompts = List.of(
+                "다음 주제에 대해 긍정적으로 한국어로 답변해 주세요: " + prompt,
+                "다음 주제에 대해 긍정적으로 한국어로 답변해 주세요: " + prompt,
+                "다음 주제에 대해 부정적으로 한국어로 답변해 주세요: " + prompt,
+                "다음 주제에 대해 부정적으로 한국어로 답변해 주세요: " + prompt,
+                "다음 주제에 대해 중립적으로 한국어로 답변해 주세요: " + prompt
         );
 
-        RequestBody body = RequestBody.create(
-                jsonObject.toString(),
-                MediaType.parse("application/json")
-        );
+        List<Map<String, Object>> responseList = new ArrayList<>();
 
-        Request request = new Request.Builder()
-                .url(apiUrl)
-                .post(body)
-                .addHeader("Authorization", "Bearer " + apiKey)
-                .addHeader("Content-Type", "application/json")
-                .build();
+        for (String modifiedPrompt : prompts) {
+            // Build the request payload
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("model", model);
+            jsonObject.put("messages", new JSONArray()
+                    .put(new JSONObject()
+                            .put("role", "user")
+                            .put("content", modifiedPrompt)
+                    )
+            );
 
-        try (Response response = client.newCall(request).execute()) {
-            if (response.isSuccessful() && response.body() != null) {
-                JSONObject responseBody = new JSONObject(response.body().string());
-                return responseBody
-                        .getJSONArray("choices")
-                        .getJSONObject(0)
-                        .getJSONObject("message")
-                        .getString("content");
-            } else {
-                throw new IOException("Unexpected response code: " + response);
+            RequestBody body = RequestBody.create(
+                    jsonObject.toString(),
+                    MediaType.parse("application/json")
+            );
+
+            Request request = new Request.Builder()
+                    .url(apiUrl)
+                    .post(body)
+                    .addHeader("Authorization", "Bearer " + apiKey)
+                    .addHeader("Content-Type", "application/json")
+                    .build();
+
+            try (Response response = client.newCall(request).execute()) {
+                if (response.isSuccessful() && response.body() != null) {
+                    JSONObject responseBody = new JSONObject(response.body().string());
+                    String content = responseBody
+                            .getJSONArray("choices")
+                            .getJSONObject(0)
+                            .getJSONObject("message")
+                            .getString("content");
+
+                    // Save the response to the database
+                    Chat chat = new Chat();
+                    chat.setChatEntity(prompt, content);
+                    Long id = chatRepository.save(chat).getId();
+
+                    // Add the saved response to the result list
+                    Map<String, Object> responseMap = new HashMap<>();
+                    responseMap.put("id", id);
+                    responseMap.put("response", content);
+
+                    responseList.add(responseMap);
+                } else {
+                    throw new IOException("Unexpected response code: " + response);
+                }
             }
         }
-    }
 
-    public Long createChat(ChatRequest request) {
-        Chat chat = new Chat();
-        chat.setQuestion(request.getQuestion());
-        return chatRepository.save(chat).getId();
+        return responseList;
     }
 
     public Long addMemo(Long chatId, MemoRequest request) {
@@ -105,8 +121,14 @@ public class ChatService {
     }
 
     public List<MemoRequest> getAllMemos(Long chatId) {
-        Chat chat = chatRepository.findById(chatId).orElseThrow(() -> new EntityNotFoundException("Chat not found"));
-        return chat.getMemos().stream().map(memo -> {
+        // chatId에 해당하는 memos를 직접 조회
+        List<Memo> memos = memoRepository.findAllByChatId(chatId);
+
+        if (memos.isEmpty()) {
+            throw new EntityNotFoundException("Memos not found for Chat with ID: " + chatId);
+        }
+
+        return memos.stream().map(memo -> {
             MemoRequest memoRequest = new MemoRequest();
             memoRequest.setContent(memo.getContent());
             memoRequest.setType(memo.getType());
@@ -130,9 +152,15 @@ public class ChatService {
         memoRepository.delete(memo);
     }
 
-    public List<IndexRequest> getAllIndices(Long chatId) {
-        Chat chat = chatRepository.findById(chatId).orElseThrow(() -> new EntityNotFoundException("Chat not found"));
-        return chat.getIndices().stream().map(index -> {
+    public List<IndexRequest> getAllIndexes(Long chatId) {
+        // chatId에 해당하는 indices를 직접 조회
+        List<Index> indices = indexRepository.findAllByChatId(chatId);
+
+        if (indices.isEmpty()) {
+            throw new EntityNotFoundException("Indices not found for Chat with ID: " + chatId);
+        }
+
+        return indices.stream().map(index -> {
             IndexRequest indexRequest = new IndexRequest();
             indexRequest.setSentence(index.getSentence());
             return indexRequest;
